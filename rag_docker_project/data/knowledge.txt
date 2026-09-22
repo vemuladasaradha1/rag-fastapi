@@ -1,0 +1,5 @@
+This folder is reserved for the application's knowledge base.
+
+The current notebook stores the five demonstration documents directly in
+app/rag.py. When you are ready, we can move the knowledge base here and build
+a proper ingestion/chunking/indexing pipeline.

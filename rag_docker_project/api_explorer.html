@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Intelligence · API Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <style>
+    /* ─── Reset ─────────────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #04070f;
+      --surface: rgba(12, 18, 40, 0.75);
+      --surface2: rgba(18, 28, 60, 0.65);
+      --border: rgba(99, 120, 255, 0.18);
+      --border-glow: rgba(120, 140, 255, 0.45);
+      --accent: #7c8fff;
+      --accent2: #a78bfa;
+      --accent3: #38bdf8;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --text: #e2e8f8;
+      --muted: #6b7aad;
+      --font: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Aurora canvas ──────────────────────────────────────────── */
+    #aurora {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .layout {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ─── Top bar ────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 24px;
+      height: 62px;
+      background: rgba(4, 7, 15, 0.85);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #7c8fff, #a78bfa);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 0 18px rgba(124, 143, 255, 0.5);
+    }
+
+    .logo-text {
+      background: linear-gradient(90deg, #7c8fff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      -webkit-text-fill-color: var(--muted);
+    }
+
+    .topbar-spacer {
+      flex: 1;
+    }
+
+    .server-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .server-label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    #serverUrl {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--accent3);
+      outline: none;
+      width: 200px;
+      transition: border-color .2s;
+    }
+
+    #serverUrl:focus {
+      border-color: var(--accent);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+
+      0%,
+      100% {
+        box-shadow: 0 0 8px var(--green);
+      }
+
+      50% {
+        box-shadow: 0 0 18px var(--green), 0 0 30px rgba(52, 211, 153, .3);
+      }
+    }
+
+    #statusText {
+      font-size: 12px;
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    /* ─── Body split ─────────────────────────────────────────────── */
+    .body-split {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────────── */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      padding: 20px 14px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      background: rgba(4, 7, 15, 0.6);
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 8px 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    .ep-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      text-align: left;
+      transition: all .2s;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .ep-btn:hover {
+      border-color: var(--border-glow);
+      background: rgba(124, 143, 255, 0.05);
+    }
+
+    .ep-btn.active {
+      background: rgba(124, 143, 255, 0.12);
+      border-color: rgba(124, 143, 255, 0.4);
+    }
+
+    .ep-btn.active::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .method-badge {
+      font-family: var(--mono);
+      font-size: 9px;
+      font-weight: 700;
+      padding: 3px 6px;
+      border-radius: 5px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+
+    .badge-get {
+      background: rgba(52, 211, 153, .15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, .3);
+    }
+
+    .badge-post {
+      background: rgba(99, 143, 255, .15);
+      color: #7c8fff;
+      border: 1px solid rgba(99, 143, 255, .3);
+    }
+
+    .ep-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .ep-path {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .ep-desc {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ─── Main panel ─────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── Endpoint header ────────────────────────────────────────── */
+    .ep-header {
+      padding: 22px 28px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 12, 28, 0.5);
+      backdrop-filter: blur(20px);
+      flex-shrink: 0;
+    }
+
+    .ep-header-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #activeMethod {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 7px;
+    }
+
+    #activePath {
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #activeDesc {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ─── Panel body ─────────────────────────────────────────────── */
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      gap: 0;
+    }
+
+    /* ─── Request / Response columns ─────────────────────────────── */
+    .col {
+      flex: 1;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .col+.col {
+      border-left: 1px solid var(--border);
+    }
+
+    .col-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ─── Glass card ─────────────────────────────────────────────── */
+    .glass {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(16px);
+      padding: 18px;
+    }
+
+    /* ─── Form inputs ────────────────────────────────────────────── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    textarea,
+    input[type=text] {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      outline: none;
+      resize: vertical;
+      transition: border-color .2s, box-shadow .2s;
+      line-height: 1.6;
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    textarea:focus,
+    input[type=text]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124, 143, 255, .12);
+    }
+
+    .char-count {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    /* ─── Send button ────────────────────────────────────────────── */
+    #sendBtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #5a6bff, #8b5cf6);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      box-shadow: 0 0 24px rgba(124, 143, 255, .35);
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    #sendBtn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 36px rgba(124, 143, 255, .55);
+    }
+
+    #sendBtn:active {
+      transform: translateY(0);
+    }
+
+    #sendBtn:disabled {
+      opacity: .55;
+      cursor: wait;
+      transform: none;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, .3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ─── Response panel ─────────────────────────────────────────── */
+    .resp-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .resp-status {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .status-ok {
+      background: rgba(52, 211, 153, .15);
+      color: var(--green);
+      border: 1px solid rgba(52, 211, 153, .3);
+    }
+
+    .status-err {
+      background: rgba(248, 113, 113, .15);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, .3);
+    }
+
+    .status-idle {
+      background: rgba(107, 122, 173, .1);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .resp-time {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .copy-btn {
+      margin-left: auto;
+      padding: 4px 12px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, .1);
+      color: var(--text);
+      border-color: var(--border-glow);
+    }
+
+    #responseBox {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 160px;
+      padding: 16px;
+      background: rgba(0, 0, 0, .4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow-y: auto;
+      max-height: 380px;
+      transition: border-color .3s;
+    }
+
+    #responseBox.has-data {
+      border-color: rgba(124, 143, 255, .3);
+    }
+
+    /* ─── Syntax colours ─────────────────────────────────────────── */
+    .tok-key {
+      color: #a78bfa;
+    }
+
+    .tok-str {
+      color: #7dd3fc;
+    }
+
+    .tok-num {
+      color: #fbbf24;
+    }
+
+    .tok-bool {
+      color: #34d399;
+    }
+
+    .tok-null {
+      color: #f87171;
+    }
+
+    .tok-punct {
+      color: #6b7aad;
+    }
+
+    /* ─── History ────────────────────────────────────────────────── */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .hist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, .3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .2s;
+      font-size: 12px;
+    }
+
+    .hist-item:hover {
+      border-color: var(--border-glow);
+      background: rgba(124, 143, 255, .07);
+    }
+
+    .hist-path {
+      font-family: var(--mono);
+      color: var(--accent);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hist-preview {
+      color: var(--muted);
+      flex: 2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hist-ts {
+      color: var(--muted);
+      font-family: var(--mono);
+      flex-shrink: 0;
+    }
+
+    /* ─── Empty state ────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 30px 0;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 30px;
+      opacity: .4;
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(124, 143, 255, .25);
+      border-radius: 99px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(124, 143, 255, .45);
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .glass {
+      animation: fadeSlideIn .3s ease both;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        width: 220px;
+      }
+
+      .panel-body {
+        flex-direction: column;
+      }
+
+      .col+.col {
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="aurora"></canvas>
+
+  <div class="layout">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="logo">
+        <div class="logo-icon">🤖</div>
+        <div>
+          <div class="logo-text">RAG Intelligence</div>
+          <div class="logo-sub">API Explorer</div>
+        </div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="server-row">
+        <span class="server-label">Server</span>
+        <input id="serverUrl" type="text" value="http://127.0.0.1:8000" spellcheck="false" />
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Checking…</span>
+      </div>
+    </header>
+
+    <!-- Body split -->
+    <div class="body-split">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" id="sidebar">
+        <div class="sidebar-title">Endpoints</div>
+      </nav>
+
+      <!-- Main -->
+      <div class="main">
+        <div class="ep-header">
+          <div class="ep-header-row">
+            <span id="activeMethod" class="method-badge badge-get">GET</span>
+            <span id="activePath">/</span>
+          </div>
+          <div id="activeDesc">Select an endpoint from the sidebar</div>
+        </div>
+
+        <div class="panel-body">
+
+          <!-- Request -->
+          <div class="col">
+            <div class="col-title">Request</div>
+            <div class="glass" id="reqCard">
+              <div class="empty-state">
+                <div class="empty-icon">⚡</div>
+                <div>Pick an endpoint to begin</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Response -->
+          <div class="col">
+            <div class="col-title">Response</div>
+            <div class="glass">
+              <div class="resp-meta">
+                <span class="resp-status status-idle" id="respStatus">— Awaiting request</span>
+                <span class="resp-time" id="respTime"></span>
+                <button class="copy-btn" id="copyBtn" onclick="copyResponse()">Copy</button>
+              </div>
+            </div>
+            <div id="responseBox"><span style="color:var(--muted);font-family:var(--font);font-size:13px;">Your response
+                will appear here…</span></div>
+            <div class="glass">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span class="col-title">History</span>
+                <button class="copy-btn" onclick="clearHistory()">Clear</button>
+              </div>
+              <div class="history-list" id="historyList">
+                <div class="empty-state" style="padding:12px 0;">
+                  <div class="empty-icon" style="font-size:20px;">🕑</div>
+                  <div>No requests yet</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ── Aurora background ─────────────────────────────────────── */
+    (function () {
+      const cvs = document.getElementById('aurora');
+      const ctx = cvs.getContext('2d');
+      let W, H;
+      const BLOBS = [
+        { x: .2, y: .3, r: 320, hue: 240, sp: .0007, ph: 0 },
+        { x: .7, y: .6, r: 280, hue: 270, sp: .0011, ph: 1 },
+        { x: .5, y: .9, r: 350, hue: 210, sp: .0009, ph: 2 },
+        { x: .85, y: .2, r: 260, hue: 200, sp: .0013, ph: 3 },
+      ];
+      const STARS = Array.from({ length: 90 }, () => ({
+        x: Math.random(), y: Math.random(),
+        r: Math.random() * 1.4 + .3,
+        sp: Math.random() * .00012 + .00004,
+        ph: Math.random() * Math.PI * 2,
+        op: Math.random() * .6 + .2,
+      }));
+      function resize() { W = cvs.width = innerWidth; H = cvs.height = innerHeight; }
+      resize(); addEventListener('resize', resize);
+      function draw(t) {
+        ctx.clearRect(0, 0, W, H);
+        BLOBS.forEach(b => {
+          const x = (b.x + Math.sin(t * b.sp + b.ph) * .12) * W;
+          const y = (b.y + Math.cos(t * b.sp * .8 + b.ph) * .1) * H;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, b.r);
+          g.addColorStop(0, `hsla(${b.hue},80%,55%,.10)`);
+          g.addColorStop(1, 'transparent');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, b.r, 0, Math.PI * 2); ctx.fill();
+        });
+        STARS.forEach(s => {
+          const x = s.x * W, y = ((s.y + t * s.sp) % 1) * H;
+          const a = s.op * (.6 + .4 * Math.sin(t * .002 + s.ph));
+          ctx.beginPath(); ctx.arc(x, y, s.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(180,200,255,${a})`; ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    })();
+
+    /* ── Endpoint definitions ───────────────────────────────────── */
+    const ENDPOINTS = [
+      { method: 'GET', path: '/', desc: 'API root — status and route map', body: null, fields: [] },
+      { method: 'GET', path: '/health', desc: 'Health check — confirms the server is alive', body: null, fields: [] },
+      {
+        method: 'POST', path: '/chat', desc: 'Direct LLM chat — raw model answer, no retrieval',
+        body: { message: 'Explain what Retrieval-Augmented Generation is.' },
+        fields: [{ key: 'message', label: 'Message', hint: 'Ask the LLM anything…', multi: true }]
+      },
+      {
+        method: 'POST', path: '/llm-calling', desc: 'Direct LLM call — alias of /chat',
+        body: { message: 'What are the main differences between LangChain and LangGraph?' },
+        fields: [{ key: 'message', label: 'Message', hint: 'Your message to the LLM…', multi: true }]
+      },
+      {
+        method: 'POST', path: '/rag', desc: 'RAG pipeline — FAISS retrieval → context → Groq LLM',
+        body: { question: 'What is RAG and how does it use vector databases?' },
+        fields: [{ key: 'question', label: 'Question', hint: 'Ask something from the knowledge base…', multi: true }]
+      },
+    ];
+
+    /* ── State ──────────────────────────────────────────────────── */
+    let activeIdx = 0;
+    let history = [];
+    let lastRaw = '';
+
+    /* ── Build sidebar ──────────────────────────────────────────── */
+    function buildSidebar() {
+      const sb = document.getElementById('sidebar');
+      ENDPOINTS.forEach((ep, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'ep-btn' + (i === activeIdx ? ' active' : '');
+        btn.id = 'epBtn' + i;
+        btn.innerHTML = `
+      <span class="method-badge badge-${ep.method.toLowerCase()}">${ep.method}</span>
+      <span class="ep-info">
+        <span class="ep-path">${ep.path}</span>
+        <span class="ep-desc">${ep.desc}</span>
+      </span>`;
+        btn.onclick = () => selectEndpoint(i);
+        sb.appendChild(btn);
+      });
+    }
+
+    /* ── Select endpoint ────────────────────────────────────────── */
+    function selectEndpoint(i) {
+      activeIdx = i;
+      const ep = ENDPOINTS[i];
+      document.querySelectorAll('.ep-btn').forEach((b, idx) => b.classList.toggle('active', idx === i));
+
+      const mBadge = document.getElementById('activeMethod');
+      mBadge.textContent = ep.method;
+      mBadge.className = `method-badge badge-${ep.method.toLowerCase()}`;
+      document.getElementById('activePath').textContent = ep.path;
+      document.getElementById('activeDesc').textContent = ep.desc;
+
+      const card = document.getElementById('reqCard');
+      card.innerHTML = '';
+      card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+
+      if (ep.method === 'GET') {
+        card.innerHTML = `
+      <div style="color:var(--muted);font-size:13px;padding:8px 0;">This endpoint takes no request body.</div>
+      <div style="margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--accent3);">GET ${ep.path}</div>`;
+      } else {
+        ep.fields.forEach(f => {
+          const wrap = document.createElement('div');
+          wrap.className = 'field';
+          const label = document.createElement('label');
+          label.textContent = f.label;
+          const input = f.multi ? document.createElement('textarea') : Object.assign(document.createElement('input'), { type: 'text' });
+          input.id = 'field-' + f.key;
+          input.placeholder = f.hint;
+          input.value = ep.body ? ep.body[f.key] : '';
+          const ctr = document.createElement('div');
+          ctr.className = 'char-count'; ctr.id = 'ctr-' + f.key;
+          ctr.textContent = input.value.length + ' chars';
+          input.addEventListener('input', () => {
+            ctr.textContent = input.value.length + ' chars';
+            if (ep.body) ep.body[f.key] = input.value;
+          });
+          wrap.append(label, input, ctr);
+          card.appendChild(wrap);
+        });
+      }
+
+      const btnWrap = document.createElement('div');
+      btnWrap.style.marginTop = '18px';
+      btnWrap.innerHTML = `<button id="sendBtn" onclick="sendRequest()">
+    <span class="btn-spinner" id="spinner"></span>
+    <span id="btnLabel">⚡ Send Request</span>
+  </button>`;
+      card.appendChild(btnWrap);
+      resetResponse();
+    }
+
+    function resetResponse() {
+      document.getElementById('respStatus').textContent = '— Awaiting request';
+      document.getElementById('respStatus').className = 'resp-status status-idle';
+      document.getElementById('respTime').textContent = '';
+      document.getElementById('responseBox').innerHTML = '<span style="color:var(--muted);font-family:var(--font);font-size:13px;">Your response will appear here…</span>';
+      document.getElementById('responseBox').classList.remove('has-data');
+      lastRaw = '';
+    }
+
+    /* ── Send request ───────────────────────────────────────────── */
+    async function sendRequest() {
+      const ep = ENDPOINTS[activeIdx];
+      const base = document.getElementById('serverUrl').value.replace(/\/$/, '');
+      const url = base + ep.path;
+      const btn = document.getElementById('sendBtn');
+      const spn = document.getElementById('spinner');
+      const lbl = document.getElementById('btnLabel');
+      btn.disabled = true; spn.style.display = 'block'; lbl.textContent = 'Sending…';
+      const t0 = Date.now();
+      const opts = { method: ep.method, headers: {} };
+      if (ep.method === 'POST') {
+        opts.headers['Content-Type'] = 'application/json';
+        const body = {};
+        (ep.fields || []).forEach(f => { const el = document.getElementById('field-' + f.key); body[f.key] = el ? el.value : ''; });
+        opts.body = JSON.stringify(body);
+      }
+      try {
+        const res = await fetch(url, opts);
+        const ms = Date.now() - t0;
+        const txt = await res.text();
+        let data; try { data = JSON.parse(txt); } catch { data = txt; }
+        lastRaw = JSON.stringify(data, null, 2);
+        const st = document.getElementById('respStatus');
+        if (res.ok) { st.textContent = `✓ ${res.status} ${res.statusText}`; st.className = 'resp-status status-ok'; }
+        else { st.textContent = `✗ ${res.status} ${res.statusText}`; st.className = 'resp-status status-err'; }
+        document.getElementById('respTime').textContent = ms + ' ms';
+        const box = document.getElementById('responseBox');
+        box.innerHTML = highlight(lastRaw); box.classList.add('has-data');
+        addHistory(ep, opts.body, data, ms, res.ok);
+      } catch (err) {
+        const ms = Date.now() - t0;
+        const st = document.getElementById('respStatus');
+        st.textContent = '✗ Network Error'; st.className = 'resp-status status-err';
+        document.getElementById('respTime').textContent = ms + ' ms';
+        lastRaw = `// Error: ${err.message}\n// Is the server running at: ${base}?`;
+        document.getElementById('responseBox').innerHTML = `<span style="color:var(--red);">${lastRaw}</span>`;
+      } finally {
+        btn.disabled = false; spn.style.display = 'none'; lbl.textContent = '⚡ Send Request';
+      }
+    }
+
+    /* ── JSON syntax highlight ─────────────────────────────────── */
+    function highlight(json) {
+      if (typeof json !== 'string') return String(json);
+      return json
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\],:])/g, m => {
+          if (/^"/.test(m)) return /:$/.test(m) ? `<span class="tok-key">${m}</span>` : `<span class="tok-str">${m}</span>`;
+          if (/true|false/.test(m)) return `<span class="tok-bool">${m}</span>`;
+          if (/null/.test(m)) return `<span class="tok-null">${m}</span>`;
+          if (/[{}\[\]]/.test(m)) return `<span class="tok-punct">${m}</span>`;
+          if (/[,:]/.test(m)) return `<span class="tok-punct">${m}</span>`;
+          return `<span class="tok-num">${m}</span>`;
+        });
+    }
+
+    /* ── History ────────────────────────────────────────────────── */
+    function addHistory(ep, reqBody, respData, ms, ok) {
+      history.unshift({ ep, reqBody, respData, ms, ok, ts: new Date().toLocaleTimeString() });
+      if (history.length > 30) history.pop();
+      renderHistory();
+    }
+    function renderHistory() {
+      const list = document.getElementById('historyList');
+      if (!history.length) {
+        list.innerHTML = `<div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:20px;">🕑</div><div>No requests yet</div></div>`;
+        return;
+      }
+      list.innerHTML = history.map((h, i) => {
+        const preview = typeof h.respData === 'object' ? JSON.stringify(h.respData).slice(0, 55) : String(h.respData).slice(0, 55);
+        return `<div class="hist-item" onclick="restoreHistory(${i})">
+      <span class="method-badge badge-${h.ep.method.toLowerCase()}" style="font-size:8px;">${h.ep.method}</span>
+      <span class="hist-path">${h.ep.path}</span>
+      <span class="hist-preview">${preview}</span>
+      <span class="hist-ts">${h.ts}</span>
+    </div>`;
+      }).join('');
+    }
+    function restoreHistory(i) {
+      const h = history[i];
+      lastRaw = JSON.stringify(h.respData, null, 2);
+      const box = document.getElementById('responseBox');
+      box.innerHTML = highlight(lastRaw); box.classList.add('has-data');
+      const st = document.getElementById('respStatus');
+      st.textContent = h.ok ? '✓ 200 OK (history)' : '✗ Error (history)';
+      st.className = h.ok ? 'resp-status status-ok' : 'resp-status status-err';
+      document.getElementById('respTime').textContent = h.ms + ' ms';
+    }
+    function clearHistory() { history = []; renderHistory(); }
+
+    /* ── Copy ───────────────────────────────────────────────────── */
+    function copyResponse() {
+      if (!lastRaw) return;
+      navigator.clipboard.writeText(lastRaw).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1800);
+      });
+    }
+
+    /* ── Health check ───────────────────────────────────────────── */
+    async function checkHealth() {
+      const base = document.getElementById('serverUrl').value.replace(/\/$/, '');
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      try {
+        const r = await fetch(base + '/health', { signal: AbortSignal.timeout(3000) });
+        if (r.ok) {
+          dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 8px var(--green)';
+          txt.style.color = 'var(--green)'; txt.textContent = 'Online';
+        } else throw 0;
+      } catch {
+        dot.style.background = 'var(--red)'; dot.style.boxShadow = '0 0 8px var(--red)';
+        txt.style.color = 'var(--red)'; txt.textContent = 'Offline';
+      }
+    }
+
+    /* ── Ctrl+Enter to send ─────────────────────────────────────── */
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const btn = document.getElementById('sendBtn');
+        if (btn && !btn.disabled) btn.click();
+      }
+    });
+
+    /* ── Init ───────────────────────────────────────────────────── */
+    buildSidebar();
+    selectEndpoint(0);
+    checkHealth();
+    setInterval(checkHealth, 8000);
+  </script>
+</body>
+
+</html>

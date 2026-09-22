@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+groq
+langchain-groq
+langchain-core
+sentence-transformers
+faiss-cpu
+numpy
