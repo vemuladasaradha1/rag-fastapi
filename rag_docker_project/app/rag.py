@@ -5,6 +5,18 @@ from . import *
 import faiss
 from groq import Groq
 from dotenv import load_dotenv
+from fastembed import TextEmbedding
+import numpy as np
+
+# Load a highly efficient, CPU-optimized text embedding model
+#model = TextEmbedding("BAAI/bge-small-en-v1.5")
+
+# Generate embeddings
+# documents = ["Hello World", "FastEmbed is incredibly lightweight."]
+# embeddings = list(model.embed(documents))
+
+#print(f"Success! Generated {len(embeddings)} embeddings without PyTorch.")
+
 
 from sentence_transformers import SentenceTransformer
 load_dotenv()
@@ -37,17 +49,21 @@ DOCUMENTS = [
     
     DASARADAHA is a good boy who live in hyderabad and curently had an circumcision operation
     for the foreskin called circumcision. he is still recovering from the pain.
-    """,
+    """
 ]
 
 MODEL_NAME = "openai/gpt-oss-20b"
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+#EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
+model = TextEmbedding("BAAI/bge-small-en-v1.5")
+
 
 
 @lru_cache(maxsize=1)
 def get_embedding_model():
-    return SentenceTransformer(EMBEDDING_MODEL_NAME)
-
+    #return SentenceTransformer(EMBEDDING_MODEL_NAME)
+    return TextEmbedding(EMBEDDING_MODEL_NAME)
+#TextEmbedding
 
 @lru_cache(maxsize=1)
 def get_groq_client():
@@ -60,11 +76,26 @@ def get_groq_client():
 @lru_cache(maxsize=1)
 def get_faiss_index():
     embedding_model = get_embedding_model()
-    embeddings = embedding_model.encode(
-        DOCUMENTS,
-        convert_to_numpy=True,
-    ).astype("float32")
+    # embeddings = embedding_model.embed(
+    #     DOCUMENTS,
+    #     convert_to_numpy=True,
+    # ).astype("float32")
 
+    # embeddings = np.stack(list(embedding_model.embed([
+    #     DOCUMENTS,
+    # ], convert_to_numpy=True))).astype("float32")
+
+    # dimension = embeddings.shape[1]
+    # index = faiss.IndexFlatL2(dimension)
+    # index.add(embeddings)
+    #embeddings = list(model.embed(DOCUMENTS))
+    embeddings = np.stack(list(model.embed(
+        DOCUMENTS,
+    convert_to_numpy=True)))
+    embeddings = np.array(embeddings).astype("float32")
+
+
+    #print(embeddings)
     dimension = embeddings.shape[1]
     index = faiss.IndexFlatL2(dimension)
     index.add(embeddings)
@@ -77,10 +108,11 @@ def retrieve_documents(query: str, k: int = 3):
 
     k = min(k, len(DOCUMENTS))
 
-    query_embedding = embedding_model.encode(
+    query_embedding = embedding_model.embed(
         [query],
         convert_to_numpy=True,
-    ).astype("float32")
+    )
+    query_embedding = np.stack(list(query_embedding)).astype("float32")
 
     distances, indices = index.search(query_embedding, k)
 
